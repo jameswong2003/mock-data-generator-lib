@@ -29,14 +29,22 @@ def extract_class(file_path: str) -> List[Type]:
 
 def extract_attributes(clazz: Type) -> Dict[str, tuple[Any, str]]:
     """
-    Extracts non-callable, non-special class attributes and their types.
+    Extracts class attributes and their types, including those only type-annotated.
     Returns a dictionary of attribute name -> (value, type name).
     """
-    attrs = {
-        name: (value, type(value).__name__)
-        for name, value in vars(clazz).items()
-        if not name.startswith('__') and not callable(value)
-    }
+    attrs = {}
+    # Handle type-annotated attributes (no default value) 
+    if hasattr(clazz, '__annotations__'):
+        for name, typ in clazz.__annotations__.items():
+            # Try to get value, fallback to None
+            value = getattr(clazz, name, None)
+            type_name = typ.__name__ if hasattr(typ, '__name__') else str(typ)
+            attrs[name] = (value, type_name)
+    # Handle attributes with values (not type-annotated)
+    for name, value in vars(clazz).items():
+        if not name.startswith('__') and not callable(value):
+            if name not in attrs:
+                attrs[name] = (value, type(value).__name__)
     return attrs
 
 
